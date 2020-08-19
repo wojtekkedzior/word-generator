@@ -20,6 +20,6 @@ Rewritten to:
    7! + (7*6*5*4*3*2) + (7*6*5*4*3) + (7*6*5*4) + (7*6*5) + (7*6) + 7
    5040 + 5040 + 2520 + 840 + 210 + 42 +7 = 13699
 
-Therefore, all the letters that make up the word "planets" can be arranged in 13699 different ways.  Note: my solution treats duplicate letters and unique. 
+Therefore, all the letters that make up the word "planets" can be arranged in 13699 different ways.  Note: my solution treats duplicate letters as unique. 
 
 
