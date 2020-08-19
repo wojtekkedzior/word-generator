@@ -10,7 +10,9 @@ import (
 	//	"github.com/davecgh/go-spew/spew"
 	//	"errors"
 	"bytes"
+	//	"sync"
 	//	"github.com/google/uuid"
+	"time"
 	"unicode/utf8"
 )
 
@@ -48,7 +50,6 @@ func containsUUID(s [][]int, word []int) bool {
 }
 
 func containsIndex(s []int, index int) bool {
-	//	fmt.Println(s)
 	for _, v := range s {
 		if v == index {
 			return true
@@ -58,14 +59,29 @@ func containsIndex(s []int, index int) bool {
 	return false
 }
 
-func (topParent *Node) lookup() {
-	size := 13699
-	rand.Seed(42)
-	pos := make([][]int, size)
-	top := topParent
+func (topParent *Node) lookup(str []byte) {
+	rand.Seed(time.Now().UnixNano())
+	//	rand.Seed(42)
+	//	top := topParent
 	lastIndex := 0
-	str := "planets"
 	strOri := str
+	var size = 0
+	var p = 1
+
+	for i := (len(str)); i > 0; i-- {
+		for j := len(str); j >= i; j-- {
+			p = p * j
+		}
+		size = size + p
+		p = 1
+	}
+
+	fmt.Println("size; ", size)
+	pos := make([][]int, size)
+
+	var count = 0
+
+	start := time.Now()
 
 	for lastIndex < size {
 		randWordSize := rand.Intn(len(str) + 1)
@@ -96,69 +112,188 @@ func (topParent *Node) lookup() {
 			wordAsIndexs[i] = index
 		}
 
-		if containsUUID(pos, wordAsIndexs) {
-			fmt.Println("do nothing for: ", wordAsIndexs)
-		} else {
+		if !containsUUID(pos, wordAsIndexs) {
+			//			fmt.Println("do nothing for: ", wordAsIndexs)
+			//		} else {
 			pos[lastIndex] = wordAsIndexs
 			lastIndex++
 		}
 
 		str = strOri
-	}
 
-	fmt.Println(pos)
+		count++
+	}
+	fmt.Println(len(pos))
+	fmt.Printf("Randon gen count: %d \n", count)
+	//	os.Exit(1)
+
+	elapsed := time.Since(start)
+	fmt.Printf("Figuring out all the permutatiosn took %s \n", elapsed)
 
 	foundsWords := make(map[string]int)
 
-	for _, v := range pos {
-		var exist = false
+	steps := len(pos) / 1000
+	fmt.Println(steps)
+	c := make(chan string)
 
-		var b bytes.Buffer
-
-		for _, va := range v {
-			r, _ := utf8.DecodeRune([]byte{str[va]})
-			b.WriteRune(r)
-		}
-
-		for i, vr := range v {
-			r, _ := utf8.DecodeRune([]byte{str[vr]})
-			n := topParent.Childern[r]
-			if n == nil {
-				exist = false
-				break
-			} else if i == len(v)-1 && n.IsWord { // is this a short word?
-				exist = true
-				break
+	for i := 0; i <= steps; i++ {
+		go func(index int, co chan<- string) {
+			var end = 0
+			//On the last 1000 th step
+			if index == steps {
+				end = len(pos)
 			} else {
-				topParent = topParent.Childern[r]
-			}
-		}
-		if exist {
-			var b bytes.Buffer
-
-			for _, va := range v {
-				r, _ := utf8.DecodeRune([]byte{str[va]})
-				b.WriteRune(r)
+				end = (index + 1) * 1000
 			}
 
-			foundsWords[b.String()] = 1
+			top := topParent
 
-			fmt.Println(b.String(), " - ------------------word exisit")
-			exist = false
-		}
-		topParent = top
+			for _, v := range pos[(index * 1000):end] {
+				var exist = false
+
+				for i, vr := range v {
+					r, _ := utf8.DecodeRune([]byte{str[vr]})
+					n := topParent.Childern[r]
+					if n == nil {
+						exist = false
+						break
+					} else if i == len(v)-1 && n.IsWord { // is this a short word?
+						exist = true
+						break
+					} else {
+						topParent = topParent.Childern[r]
+					}
+				}
+				if exist {
+					var b bytes.Buffer
+
+					for _, va := range v {
+						r, _ := utf8.DecodeRune([]byte{str[va]})
+						b.WriteRune(r)
+					}
+
+					//					co <- b.String()
+					co <- fmt.Sprintf("checking: %s, %d, ", b.String(), index)
+					//					foundsWords[b.String()] = 1
+					exist = false
+				}
+				topParent = top
+
+				//				var b bytes.Buffer
+				//				for _, va := range v {
+				//					r, _ := utf8.DecodeRune([]byte{str[va]})
+				//					b.WriteRune(r)
+				//				}
+				//				c <- fmt.Sprintf("checking: %s, %d, ", b.String(), index)
+			}
+		}(i, c)
+
 	}
 
-	for i, _ := range foundsWords {
-		fmt.Println(i)
+	start = time.Now()
+
+	for i := 0; i < size; i++ {
+		foundsWords[<-c] = 1
 	}
+
+	elapsed = time.Since(start)
+	fmt.Printf("Traversing tree took %s \n", elapsed)
+
+	//	var wg sync.WaitGroup
+	//
+	//		wg.Add(steps)
+	//	for i := 0; i < steps; i++ {
+	//
+	//		go func() {
+	//			defer wg.Done()
+	//
+	//			//			for _, v := range pos[i:(i * 1000)] {
+	//			//				fmt.Println("adad", v)
+	//			//			}
+	//
+	//			for _, v := range pos[(i * 1000) : (i+1)*1000] {
+	//				var exist = false
+	//
+	//				for i, vr := range v {
+	//					r, _ := utf8.DecodeRune([]byte{str[vr]})
+	//					n := topParent.Childern[r]
+	//					if n == nil {
+	//						exist = false
+	//						break
+	//					} else if i == len(v)-1 && n.IsWord { // is this a short word?
+	//						exist = true
+	//						break
+	//					} else {
+	//						topParent = topParent.Childern[r]
+	//					}
+	//				}
+	//				if exist {
+	//					var b bytes.Buffer
+	//
+	//					for _, va := range v {
+	//						r, _ := utf8.DecodeRune([]byte{str[va]})
+	//						b.WriteRune(r)
+	//					}
+	//
+	//					foundsWords[b.String()] = 1
+	//					exist = false
+	//				}
+	//				topParent = top
+	//			}
+	//
+	//		}()
+	//
+	//	}
+
+	//Works without mutex
+
+	//	for _, v := range pos {
+	//		var exist = false
+	//
+	//		for i, vr := range v {
+	//			r, _ := utf8.DecodeRune([]byte{str[vr]})
+	//			n := topParent.Childern[r]
+	//			if n == nil {
+	//				exist = false
+	//				break
+	//			} else if i == len(v)-1 && n.IsWord { // is this a short word?
+	//				exist = true
+	//				break
+	//			} else {
+	//				topParent = topParent.Childern[r]
+	//			}
+	//		}
+	//		if exist {
+	//			var b bytes.Buffer
+	//
+	//			for _, va := range v {
+	//				r, _ := utf8.DecodeRune([]byte{str[va]})
+	//				b.WriteRune(r)
+	//			}
+	//
+	//			foundsWords[b.String()] = 1
+	//			exist = false
+	//		}
+	//		topParent = top
+	//	}
 
 	fmt.Println(len(foundsWords))
 }
 
 func main() {
-	f, err := os.Open("/home/wojtek/workspace/word-generator/bin/words_alpha.txt")
+	str := "planets"
+	var skippedDueToLength = 0
+	var skippedDueToChar = 0
+
+	strDict := make(map[rune]int)
+
+	for _, v := range str {
+		strDict[v] = 1
+	}
+
+	//	f, err := os.Open("/home/wojtek/workspace/word-generator/bin/words_alpha.txt")
 	//	f, err := os.Open("/home/wojtek/workspace/word-generator/bin/smallWords.txt")
+	f, err := os.Open("/usr/share/dict/british-english")
 
 	if err != nil {
 		fmt.Println(err)
@@ -170,6 +305,26 @@ func main() {
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		r := []rune(scanner.Text())
+
+		if len(r) > len(str) {
+			skippedDueToLength++
+			continue
+		}
+
+		cont := true
+
+		for _, v := range r {
+			if strDict[v] != 1 {
+				skippedDueToChar++
+				cont = false
+				break
+			}
+		}
+
+		if !cont {
+			continue
+		}
+
 		for _, v := range r {
 			if parent.Childern[v] == nil {
 				node := &Node{Childern: make(map[rune]*Node), IsWord: false, Value: v}
@@ -183,5 +338,7 @@ func main() {
 		parent = topParent
 	}
 
-	topParent.lookup()
+	fmt.Printf("Skipped because of length: %d, Skipped because chars don't exist in provided word: %d.  Total skipped: %d \n", skippedDueToLength, skippedDueToChar, (skippedDueToChar + skippedDueToLength))
+
+	topParent.lookup([]byte(str))
 }
