@@ -8,7 +8,7 @@ Details:
 Given the word "planets", we have a total of 7 letters to work with. We need to find out the number of permutations we can make. Not only from all the 7 words, but also words of any length less then 7. 
 To do this we use http://discrete.openmathbooks.org/dmoi2/sec_counting-combperm.html (also see https://en.wikipedia.org/wiki/Summation) which gives us something like:
 
-(7, 7)  ->  7*6*5*4*3*2*1
+(7, 7)  ->  7*6*5*4*3*2*1 (in other words: 7!)
 (7, 6)  ->  7*6*5*4*3*2
 (7, 5)  ->  7*6*5*4*3
 (7, 4)  ->  7*6*5*4
