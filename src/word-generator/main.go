@@ -12,6 +12,8 @@ import (
 	"bytes"
 	//	"sync"
 	//	"github.com/google/uuid"
+	//	"crypto/sha256"
+	//	"hash"
 	"time"
 	"unicode/utf8"
 )
@@ -25,30 +27,6 @@ type Node struct {
 	Childern map[rune]*Node
 }
 
-func containsUUID(s [][]int, word []int) bool {
-	for _, v := range s {
-		hits := 0
-
-		if len(v) != len(word) {
-			continue
-		}
-
-		for j, k := range v {
-			if k != word[j] {
-				break
-			} else {
-				hits++
-			}
-		}
-
-		if hits == len(word) {
-			return true
-		}
-	}
-
-	return false
-}
-
 func containsIndex(s []int, index int) bool {
 	for _, v := range s {
 		if v == index {
@@ -59,11 +37,18 @@ func containsIndex(s []int, index int) bool {
 	return false
 }
 
+func byteArrToString(byteArr []byte) string {
+	var b bytes.Buffer
+	for _, va := range byteArr {
+		r, _ := utf8.DecodeRune([]byte{va})
+		b.WriteRune(r)
+	}
+
+	return b.String()
+}
+
 func (topParent Node) lookup(str []byte) {
 	rand.Seed(time.Now().UnixNano())
-	//	rand.Seed(42)
-	//	top := topParent
-	lastIndex := 0
 	strOri := str
 	var size = 0
 	var p = 1
@@ -77,13 +62,13 @@ func (topParent Node) lookup(str []byte) {
 	}
 
 	fmt.Println("size; ", size)
-	pos := make([][]int, size)
-
+	pos := make([][]int, 1) // this wil cause the array to be coppied immedtialy. perhaps we should use size / something?
+	posWord := make(map[string]int)
 	var count = 0
 
 	start := time.Now()
 
-	for lastIndex < size {
+	for len(pos) < size {
 		randWordSize := rand.Intn(len(str) + 1)
 
 		if randWordSize == 0 {
@@ -112,20 +97,19 @@ func (topParent Node) lookup(str []byte) {
 			wordAsIndexs[i] = index
 		}
 
-		if !containsUUID(pos, wordAsIndexs) {
-			//			fmt.Println("do nothing for: ", wordAsIndexs)
-			//		} else {
-			pos[lastIndex] = wordAsIndexs
-			lastIndex++
+		wordAsStr := byteArrToString(word)
+
+		if posWord[wordAsStr] != 1 {
+			posWord[wordAsStr] = 1
+			pos = append(pos, wordAsIndexs)
 		}
 
 		str = strOri
-
 		count++
 	}
-	fmt.Println(len(pos))
+
+	fmt.Println("Length of pos: ", len(pos))
 	fmt.Printf("Randon gen count: %d \n", count)
-	//	os.Exit(1)
 
 	elapsed := time.Since(start)
 	fmt.Printf("Figuring out all the permutatiosn took %s \n", elapsed)
@@ -135,10 +119,6 @@ func (topParent Node) lookup(str []byte) {
 	steps := len(pos) / 1000
 	fmt.Println(steps)
 	c := make(chan string)
-
-	//	fmt.Println("address of topParent: ", &topParent)
-	//	fmt.Println("value of topParent: ", topParent)
-	//	fmt.Println("value of topParent: ", *topParent)
 
 	for i := 0; i <= steps; i++ {
 		go func(index int, co chan<- string) {
@@ -183,13 +163,6 @@ func (topParent Node) lookup(str []byte) {
 				}
 
 				top = &topParent
-
-				//				var b bytes.Buffer
-				//				for _, va := range v {
-				//					r, _ := utf8.DecodeRune([]byte{str[va]})
-				//					b.WriteRune(r)
-				//				}
-				//				c <- fmt.Sprintf("checking: %s, %d, ", b.String(), index)
 			}
 		}(i, c)
 
@@ -205,38 +178,6 @@ func (topParent Node) lookup(str []byte) {
 	elapsed = time.Since(start)
 	fmt.Printf("Traversing tree took %s \n", elapsed)
 
-	//Works without mutex - takes about 1.4ms, while with go routines it takes 0.6ms
-
-	//	for _, v := range pos {
-	//		var exist = false
-	//
-	//		for i, vr := range v {
-	//			r, _ := utf8.DecodeRune([]byte{str[vr]})
-	//			n := topParent.Childern[r]
-	//			if n == nil {
-	//				exist = false
-	//				break
-	//			} else if i == len(v)-1 && n.IsWord { // is this a short word?
-	//				exist = true
-	//				break
-	//			} else {
-	//				topParent = topParent.Childern[r]
-	//			}
-	//		}
-	//		if exist {
-	//			var b bytes.Buffer
-	//
-	//			for _, va := range v {
-	//				r, _ := utf8.DecodeRune([]byte{str[va]})
-	//				b.WriteRune(r)
-	//			}
-	//
-	//			foundsWords[b.String()] = 1
-	//			exist = false
-	//		}
-	//		topParent = top
-	//	}
-
 	fmt.Println(len(foundsWords))
 }
 
@@ -251,8 +192,6 @@ func main() {
 		strDict[v] = 1
 	}
 
-	//	f, err := os.Open("/home/wojtek/workspace/word-generator/bin/words_alpha.txt")
-	//	f, err := os.Open("/home/wojtek/workspace/word-generator/bin/smallWords.txt")
 	f, err := os.Open("/usr/share/dict/british-english")
 
 	if err != nil {
