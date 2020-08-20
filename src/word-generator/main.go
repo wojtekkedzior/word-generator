@@ -59,7 +59,7 @@ func containsIndex(s []int, index int) bool {
 	return false
 }
 
-func (topParent *Node) lookup(str []byte) {
+func (topParent Node) lookup(str []byte) {
 	rand.Seed(time.Now().UnixNano())
 	//	rand.Seed(42)
 	//	top := topParent
@@ -136,6 +136,10 @@ func (topParent *Node) lookup(str []byte) {
 	fmt.Println(steps)
 	c := make(chan string)
 
+	fmt.Println("address of topParent: ", &topParent)
+	fmt.Println("value of topParent: ", topParent)
+	//	fmt.Println("value of topParent: ", *topParent)
+
 	for i := 0; i <= steps; i++ {
 		go func(index int, co chan<- string) {
 			var end = 0
@@ -146,14 +150,23 @@ func (topParent *Node) lookup(str []byte) {
 				end = (index + 1) * 1000
 			}
 
-			top := topParent
+			var top *Node
+			top = &topParent
+			//			fmt.Println("address of top2: ", top2)
+
+			//			top := topParent
+			fmt.Println("address of top: ", top)
+			//			fmt.Println("address of top: ", top)
+			//			fmt.Println("Value  top points to: ", *top)
 
 			for _, v := range pos[(index * 1000):end] {
 				var exist = false
 
 				for i, vr := range v {
 					r, _ := utf8.DecodeRune([]byte{str[vr]})
-					n := topParent.Childern[r]
+					n := top.Childern[r]
+					fmt.Println(r, n, i)
+
 					if n == nil {
 						exist = false
 						break
@@ -161,9 +174,12 @@ func (topParent *Node) lookup(str []byte) {
 						exist = true
 						break
 					} else {
-						topParent = topParent.Childern[r]
+						top = top.Childern[r]
 					}
 				}
+
+				fmt.Println(exist)
+
 				if exist {
 					var b bytes.Buffer
 
@@ -172,12 +188,11 @@ func (topParent *Node) lookup(str []byte) {
 						b.WriteRune(r)
 					}
 
-					//					co <- b.String()
-					co <- fmt.Sprintf("checking: %s, %d, ", b.String(), index)
-					//					foundsWords[b.String()] = 1
+					co <- fmt.Sprintf(b.String())
 					exist = false
 				}
-				topParent = top
+
+				top = &topParent
 
 				//				var b bytes.Buffer
 				//				for _, va := range v {
@@ -192,7 +207,8 @@ func (topParent *Node) lookup(str []byte) {
 
 	start = time.Now()
 
-	for i := 0; i < size; i++ {
+	for i := 0; i < 159; i++ {
+		//		fmt.Println(i)
 		foundsWords[<-c] = 1
 	}
 
