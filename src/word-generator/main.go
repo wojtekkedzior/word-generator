@@ -136,8 +136,8 @@ func (topParent Node) lookup(str []byte) {
 	fmt.Println(steps)
 	c := make(chan string)
 
-	fmt.Println("address of topParent: ", &topParent)
-	fmt.Println("value of topParent: ", topParent)
+	//	fmt.Println("address of topParent: ", &topParent)
+	//	fmt.Println("value of topParent: ", topParent)
 	//	fmt.Println("value of topParent: ", *topParent)
 
 	for i := 0; i <= steps; i++ {
@@ -150,14 +150,7 @@ func (topParent Node) lookup(str []byte) {
 				end = (index + 1) * 1000
 			}
 
-			var top *Node
-			top = &topParent
-			//			fmt.Println("address of top2: ", top2)
-
-			//			top := topParent
-			fmt.Println("address of top: ", top)
-			//			fmt.Println("address of top: ", top)
-			//			fmt.Println("Value  top points to: ", *top)
+			top := &topParent
 
 			for _, v := range pos[(index * 1000):end] {
 				var exist = false
@@ -165,7 +158,6 @@ func (topParent Node) lookup(str []byte) {
 				for i, vr := range v {
 					r, _ := utf8.DecodeRune([]byte{str[vr]})
 					n := top.Childern[r]
-					fmt.Println(r, n, i)
 
 					if n == nil {
 						exist = false
@@ -177,8 +169,6 @@ func (topParent Node) lookup(str []byte) {
 						top = top.Childern[r]
 					}
 				}
-
-				fmt.Println(exist)
 
 				if exist {
 					var b bytes.Buffer
@@ -215,53 +205,7 @@ func (topParent Node) lookup(str []byte) {
 	elapsed = time.Since(start)
 	fmt.Printf("Traversing tree took %s \n", elapsed)
 
-	//	var wg sync.WaitGroup
-	//
-	//		wg.Add(steps)
-	//	for i := 0; i < steps; i++ {
-	//
-	//		go func() {
-	//			defer wg.Done()
-	//
-	//			//			for _, v := range pos[i:(i * 1000)] {
-	//			//				fmt.Println("adad", v)
-	//			//			}
-	//
-	//			for _, v := range pos[(i * 1000) : (i+1)*1000] {
-	//				var exist = false
-	//
-	//				for i, vr := range v {
-	//					r, _ := utf8.DecodeRune([]byte{str[vr]})
-	//					n := topParent.Childern[r]
-	//					if n == nil {
-	//						exist = false
-	//						break
-	//					} else if i == len(v)-1 && n.IsWord { // is this a short word?
-	//						exist = true
-	//						break
-	//					} else {
-	//						topParent = topParent.Childern[r]
-	//					}
-	//				}
-	//				if exist {
-	//					var b bytes.Buffer
-	//
-	//					for _, va := range v {
-	//						r, _ := utf8.DecodeRune([]byte{str[va]})
-	//						b.WriteRune(r)
-	//					}
-	//
-	//					foundsWords[b.String()] = 1
-	//					exist = false
-	//				}
-	//				topParent = top
-	//			}
-	//
-	//		}()
-	//
-	//	}
-
-	//Works without mutex
+	//Works without mutex - takes about 1.4ms, while with go routines it takes 0.6ms
 
 	//	for _, v := range pos {
 	//		var exist = false
