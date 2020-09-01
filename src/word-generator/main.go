@@ -2,18 +2,11 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
-	//	"io/ioutil"
 	"math/rand"
 	"os"
-	//	"strings"
-	//	"github.com/davecgh/go-spew/spew"
-	//	"errors"
-	"bytes"
-	//	"sync"
-	//	"github.com/google/uuid"
-	//	"crypto/sha256"
-	//	"hash"
+	"sync"
 	"time"
 	"unicode/utf8"
 )
@@ -61,7 +54,6 @@ func (topParent Node) lookup(str []byte) {
 		p = 1
 	}
 
-	fmt.Println("size; ", size)
 	pos := make([][]int, 1) // this wil cause the array to be coppied immedtialy. perhaps we should use size / something?
 	posWord := make(map[string]int)
 	var count = 0
@@ -69,6 +61,7 @@ func (topParent Node) lookup(str []byte) {
 	start := time.Now()
 
 	for len(pos) < size {
+
 		randWordSize := rand.Intn(len(str) + 1)
 
 		if randWordSize == 0 {
@@ -108,20 +101,21 @@ func (topParent Node) lookup(str []byte) {
 		count++
 	}
 
-	fmt.Println("Length of pos: ", len(pos))
-	fmt.Printf("Randon gen count: %d \n", count)
+	fmt.Printf("Number of possibilities: %d \n", len(pos))
+	fmt.Printf("Number of Random iterations: %d \n", count)
+	fmt.Printf("Figuring out all the permutations took %s \n", time.Since(start))
 
-	elapsed := time.Since(start)
-	fmt.Printf("Figuring out all the permutatiosn took %s \n", elapsed)
-
-	foundsWords := make(map[string]int)
+	var foundWords sync.Map
+	var wg sync.WaitGroup
 
 	steps := len(pos) / 1000
-	fmt.Println(steps)
-	c := make(chan string)
 
 	for i := 0; i <= steps; i++ {
-		go func(index int, co chan<- string) {
+		wg.Add(1)
+
+		go func(index int) {
+			defer wg.Done()
+
 			var end = 0
 			//On the last 1000 th step
 			if index == steps {
@@ -158,31 +152,33 @@ func (topParent Node) lookup(str []byte) {
 						b.WriteRune(r)
 					}
 
-					co <- fmt.Sprintf(b.String())
+					foundWords.Store(b.String(), 1)
 					exist = false
 				}
 
 				top = &topParent
 			}
-		}(i, c)
-
+		}(i)
 	}
 
 	start = time.Now()
+	wg.Wait()
 
-	for i := 0; i < 159; i++ {
-		//		fmt.Println(i)
-		foundsWords[<-c] = 1
-	}
+	fmt.Printf("Traversing tree took %s \n", time.Since(start))
 
-	elapsed = time.Since(start)
-	fmt.Printf("Traversing tree took %s \n", elapsed)
+	m := map[string]interface{}{}
+	foundWords.Range(func(key, value interface{}) bool {
+		m[fmt.Sprint(key)] = value
+		return true
+	})
 
-	fmt.Println(len(foundsWords))
+	fmt.Printf("Found a total of %d words.", len(m))
 }
 
 func main() {
-	str := "planets"
+	str := "planets" // 7
+	//	str := "yoghurts" //8
+	//	str := "youngster" //9
 	var skippedDueToLength = 0
 	var skippedDueToChar = 0
 
