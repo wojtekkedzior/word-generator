@@ -44,14 +44,13 @@ func (topParent Node) lookup(str []byte) {
 	rand.Seed(time.Now().UnixNano())
 	strOri := str
 	var size = 0
-	var p = 1
 
 	for i := (len(str)); i > 0; i-- {
+		var p = 1
 		for j := len(str); j >= i; j-- {
 			p = p * j
 		}
 		size = size + p
-		p = 1
 	}
 
 	pos := make([][]int, 1) // this wil cause the array to be coppied immedtialy. perhaps we should use size / something?
@@ -61,7 +60,6 @@ func (topParent Node) lookup(str []byte) {
 	start := time.Now()
 
 	for len(pos) < size {
-
 		randWordSize := rand.Intn(len(str) + 1)
 
 		if randWordSize == 0 {
