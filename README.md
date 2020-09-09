@@ -1,7 +1,7 @@
 # word-generator
 
 Problem: Work out the number of possible combinations of letters in a given word.
-Example: Using the British English dictionary on Ubunut (/usr/share/dict/british-english) we end up with 159 words for an input word "planes"
+Example: Using the British English dictionary on Ubuntu (/usr/share/dict/british-english) we end up with 159 words for an input word "planes"
 
 ## Details:
 
