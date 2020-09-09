@@ -40,26 +40,33 @@ func byteArrToString(byteArr []byte) string {
 	return b.String()
 }
 
-func (topParent Node) lookup(str []byte) {
-	rand.Seed(time.Now().UnixNano())
-	strOri := str
+func getPermutations(length int) int {
 	var size = 0
-
-	for i := (len(str)); i > 0; i-- {
+	for i := (length); i > 0; i-- {
 		var p = 1
-		for j := len(str); j >= i; j-- {
+		for j := length; j >= i; j-- {
 			p = p * j
 		}
 		size = size + p
 	}
+	return size
+}
 
-	pos := make([][]int, 1) // this wil cause the array to be coppied immedtialy. perhaps we should use size / something?
+func (topParent Node) lookup(str []byte) {
+	rand.Seed(time.Now().UnixNano())
+	strOri := str
+
+	permutations := getPermutations(len(str))
+
+	pos := make([][]int, 0) // this wil cause the array to be coppied immedtialy. perhaps we should use size / something?
 	posWord := make(map[string]int)
 	var count = 0
 
 	start := time.Now()
 
-	for len(pos) < size {
+	// work out all the possible permutations
+
+	for len(pos) < permutations {
 		randWordSize := rand.Intn(len(str) + 1)
 
 		if randWordSize == 0 {
