@@ -40,7 +40,7 @@ func byteArrToString(byteArr []byte) string {
 	return b.String()
 }
 
-func getPermutations(length int) int {
+func getNumberOfPermutations(length int) int {
 	var size = 0
 	for i := (length); i > 0; i-- {
 		var p = 1
@@ -49,24 +49,21 @@ func getPermutations(length int) int {
 		}
 		size = size + p
 	}
+
+	fmt.Printf("Number of possibilities: %d \n", size)
 	return size
 }
 
-func (topParent Node) lookup(str []byte) {
+func getPermutations(permCount int, str []byte) [][]int {
 	rand.Seed(time.Now().UnixNano())
 	strOri := str
-
-	permutations := getPermutations(len(str))
-
 	pos := make([][]int, 0) // this wil cause the array to be coppied immedtialy. perhaps we should use size / something?
 	posWord := make(map[string]int)
 	var count = 0
 
 	start := time.Now()
 
-	// work out all the possible permutations
-
-	for len(pos) < permutations {
+	for len(pos) < permCount {
 		randWordSize := rand.Intn(len(str) + 1)
 
 		if randWordSize == 0 {
@@ -106,16 +103,27 @@ func (topParent Node) lookup(str []byte) {
 		count++
 	}
 
-	fmt.Printf("Number of possibilities: %d \n", len(pos))
 	fmt.Printf("Number of Random iterations: %d \n", count)
 	fmt.Printf("Figuring out all the permutations took %s \n", time.Since(start))
+
+	return pos
+}
+
+func (topParent Node) lookup(str []byte) {
+	//work out the number of all possible permutations
+	permCount := getNumberOfPermutations(len(str))
+
+	// work out all the possible permutations
+	pos := getPermutations(permCount, str)
 
 	var foundWords sync.Map
 	var wg sync.WaitGroup
 
-	steps := len(pos) / 1000
+	//each routine will process 1000 permutations
+	steps := permCount / 1000
 
-	for i := 0; i <= steps; i++ {
+	start := time.Now()
+	for i := 0; i <= permCount/1000; i++ {
 		wg.Add(1)
 
 		go func(index int) {
@@ -124,7 +132,7 @@ func (topParent Node) lookup(str []byte) {
 			var end = 0
 			//On the last 1000 th step
 			if index == steps {
-				end = len(pos)
+				end = permCount
 			} else {
 				end = (index + 1) * 1000
 			}
@@ -166,7 +174,6 @@ func (topParent Node) lookup(str []byte) {
 		}(i)
 	}
 
-	start = time.Now()
 	wg.Wait()
 
 	fmt.Printf("Traversing tree took %s \n", time.Since(start))
