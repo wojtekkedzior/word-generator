@@ -119,27 +119,25 @@ func (topParent Node) lookup(str []byte) {
 	var foundWords sync.Map
 	var wg sync.WaitGroup
 
-	//each routine will process 1000 permutations
-	steps := permCount / 1000
-
 	start := time.Now()
-	for i := 0; i <= permCount/1000; i++ {
+
+	//each routine will process 1000 permutations
+	for index := 0; index <= permCount/1000; index++ {
 		wg.Add(1)
 
-		go func(index int) {
+		var end = 0
+		//On the last 1000 th step
+		if index == permCount%1000 {
+			end = permCount
+		} else {
+			end = (index + 1) * 1000
+		}
+
+		go func(start, end int) {
 			defer wg.Done()
-
-			var end = 0
-			//On the last 1000 th step
-			if index == steps {
-				end = permCount
-			} else {
-				end = (index + 1) * 1000
-			}
-
 			top := &topParent
 
-			for _, v := range pos[(index * 1000):end] {
+			for _, v := range pos[start:end] {
 				var exist = false
 
 				for i, vr := range v {
@@ -171,32 +169,34 @@ func (topParent Node) lookup(str []byte) {
 
 				top = &topParent
 			}
-		}(i)
+		}(index*1000, end)
 	}
 
 	wg.Wait()
 
 	fmt.Printf("Traversing tree took %s \n", time.Since(start))
 
-	m := map[string]interface{}{}
+	//sync.Map doesn't have a way of revealing it's size, so have to convert it to a normal map or list
+	var finalResult []string
+
 	foundWords.Range(func(key, value interface{}) bool {
-		m[fmt.Sprint(key)] = value
+		finalResult = append(finalResult, fmt.Sprint(key))
 		return true
 	})
 
-	fmt.Printf("Found a total of %d words.", len(m))
+	fmt.Printf("Found a total of %d words.", len(finalResult))
 }
 
 func main() {
-	str := "planets" // 7
-	//	str := "yoghurts" //8
-	//	str := "youngster" //9
+	inputWord := "planets" // 7
+	//	inputWord := "yoghurts" //8
+	//	inputWord := "youngster" //9
 	var skippedDueToLength = 0
 	var skippedDueToChar = 0
 
 	strDict := make(map[rune]int)
 
-	for _, v := range str {
+	for _, v := range inputWord {
 		strDict[v] = 1
 	}
 
@@ -213,7 +213,7 @@ func main() {
 	for scanner.Scan() {
 		r := []rune(scanner.Text())
 
-		if len(r) > len(str) {
+		if len(r) > len(inputWord) {
 			skippedDueToLength++
 			continue
 		}
@@ -247,5 +247,5 @@ func main() {
 
 	fmt.Printf("Skipped because of length: %d, Skipped because chars don't exist in provided word: %d.  Total skipped: %d \n", skippedDueToLength, skippedDueToChar, (skippedDueToChar + skippedDueToLength))
 
-	topParent.lookup([]byte(str))
+	topParent.lookup([]byte(inputWord))
 }
