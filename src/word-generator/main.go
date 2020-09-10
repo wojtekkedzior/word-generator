@@ -191,8 +191,7 @@ func main() {
 	inputWord := "planets" // 7
 	//	inputWord := "yoghurts" //8
 	//	inputWord := "youngster" //9
-	var skippedDueToLength = 0
-	var skippedDueToChar = 0
+	var skippedDueToLength, skippedDueToChar = 0, 0
 
 	strDict := make(map[rune]int)
 
