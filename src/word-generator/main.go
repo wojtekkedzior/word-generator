@@ -57,7 +57,7 @@ func getNumberOfPermutations(length int) int {
 func getPermutations(permCount int, str []byte) [][]int {
 	rand.Seed(time.Now().UnixNano())
 	strOri := str
-	pos := make([][]int, 0) // this wil cause the array to be coppied immedtialy. perhaps we should use size / something?        
+	pos := make([][]int, 0) // this wil cause the array to be coppied immedtialy. perhaps we should use size / something?         
 	posWord := make(map[string]int)
 	var count = 0
 
