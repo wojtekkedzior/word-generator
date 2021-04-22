@@ -39,32 +39,32 @@ The results are broken down by CPU and method.  I've selected a 9-character long
 
 ### "youngster" - brute force - Intel 4930K clocked at 4.30 GHz 
 
-  Skipped because of length: 33146, Skipped because chars don't exist in provided word: 68028.  Total skipped: 101174 
-  Number of possibilities: **986409**
-  Number of Random iterations: **39691600**
-  Figuring out all the permutations took **34.957715773s**
-  Traversing tree took **21.390154ms**
-  Found a total of 264 words.
+      Skipped because of length: 33146, Skipped because chars don't exist in provided word: 68028.  Total skipped: 101174 
+      Number of possibilities: 986409
+      Number of Random iterations: 39691600
+      Figuring out all the permutations took 34.957715773s
+      Traversing tree took 21.390154ms
+      Found a total of 264 words.
 
 ### "youngster" - brute force - AMD 5800X at 4.75 GHz
 
-  Skipped because of length: 33146, Skipped because chars don't exist in provided word: 68028.  Total skipped: 101174
-  Number of possibilities: **986409**
-  Number of Random iterations: **59485463**
-  Figuring out all the permutations took **23.754992341s**
-  Traversing tree took **74.642873ms**
-  Found a total of 264 words.
+      Skipped because of length: 33146, Skipped because chars don't exist in provided word: 68028.  Total skipped: 101174
+      Number of possibilities: 986409
+      Number of Random iterations: 59485463
+      Figuring out all the permutations took 23.754992341s
+      Traversing tree took 74.642873ms
+      Found a total of 264 words.
 
 ### "youngster" - recursive lookup - AMD 5800X at 4.75 GHz
 
-  Skipped because of length: 33146, Skipped because chars don't exist in provided word: 68028.  Total skipped: 101174 
-  Number of possibilities for length of 9 is **986409**
-  Number of possibilities for length of 10 is **9864100**
-  Number of possibilites generated: **10976173**
-  Number of iterations to generete all permutations: **10976173**
-  Time to generete all permutations **881.606448ms**
-  Traversing tree took **5.53395ms**
-  Found a total of 264 words.
+      Skipped because of length: 33146, Skipped because chars don't exist in provided word: 68028.  Total skipped: 101174 
+      Number of possibilities for length of 9 is 986409
+      Number of possibilities for length of 10 is 9864100
+      Number of possibilites generated: 10976173
+      Number of iterations to generete all permutations: 10976173
+      Time to generete all permutations 881.606448ms
+      Traversing tree took 5.53395ms
+      Found a total of 264 words.
 
 
 
