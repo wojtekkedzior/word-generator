@@ -84,8 +84,6 @@ func run(length int, index int) {
 			writePossibleWordArray(length, counters[0:index+1])
 			count++
 			run(length, index+1)
-		} else {
-			continue
 		}
 	}
 }
