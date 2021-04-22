@@ -1,0 +1,157 @@
+[]
+[0]
+[0 1]
+[0 1 2]
+[0 2]
+[0 2 1]
+[1]
+[1 0]
+[1 0 2]
+[1 2]
+[1 2 0]
+[2]
+[2 0]
+[2 0 1]
+[2 1]
+[2 1 0]
+[0]
+[0]
+[0 1]
+[0 1 2]
+[0 2]
+[0 2 1]
+[0 1]
+[0 1]
+[0 1 2]
+[0 1 2]
+[0 1 2]
+[0 2]
+[0 2]
+[0 2 1]
+[0 2 1]
+[0 2 1]
+[1]
+[1]
+[1 0]
+[1 0 2]
+[1 2]
+[1 2 0]
+[1 0]
+[1 0]
+[1 0 2]
+[1 0 2]
+[1 0 2]
+[1 2]
+[1 2]
+[1 2 0]
+[1 2 0]
+[1 2 0]
+[2]
+[2]
+[2 0]
+[2 0 1]
+[2 1]
+[2 1 0]
+[2 0]
+[2 0]
+[2 0 1]
+[2 0 1]
+[2 0 1]
+[2 1]
+[2 1]
+[2 1 0]
+[2 1 0]
+[2 1 0]
+
+
+
+
+
+
+
+
+
+
+
+
+// count, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10 := 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	// for i := 0; i < 10; i++ {
+	// 	c1 = i
+	// 	count++
+	// 	pos = writePossibleWord(pos, c1)
+	// 	for j := 0; j < 10; j++ {
+	// 		if j == i {
+	// 			continue
+	// 		}
+	// 		c2 = j
+	// 		count++
+	// 		pos = writePossibleWord(pos, c1, c2)
+	// 		for k := 0; k < 10; k++ {
+	// 			if k == j || k == i {
+	// 				continue
+	// 			}
+	// 			c3 = k
+	// 			count++
+	// 			pos = writePossibleWord(pos, c1, c2, c3)
+	// 			for l := 0; l < 10; l++ {
+	// 				if l == k || l == j || l == i {
+	// 					continue
+	// 				}
+	// 				c4 = l
+	// 				count++
+	// 				pos = writePossibleWord(pos, c1, c2, c3, c4)
+	// 				for m := 0; m < 10; m++ {
+	// 					if m == l || m == k || m == j || m == i {
+	// 						continue
+	// 					}
+	// 					c5 = m
+	// 					count++
+	// 					pos = writePossibleWord(pos, c1, c2, c3, c4, c5)
+	// 					for n := 0; n < 10; n++ {
+	// 						if n == m || n == l || n == k || n == j || n == i {
+	// 							continue
+	// 						}
+	// 						c6 = n
+	// 						count++
+	// 						pos = writePossibleWord(pos, c1, c2, c3, c4, c5, c6)
+	// 						for o := 0; o < 10; o++ {
+	// 							if o == n || o == m || o == l || o == k || o == j || o == i {
+	// 								continue
+	// 							}
+	// 							c7 = o
+	// 							count++
+	// 							pos = writePossibleWord(pos, c1, c2, c3, c4, c5, c6, c7)
+
+	// 							for p := 0; p < 10; p++ {
+	// 								if p == o || p == n || p == m || p == l || p == k || p == j || p == i {
+	// 									continue
+	// 								}
+	// 								c8 = p
+	// 								count++
+	// 								pos = writePossibleWord(pos, c1, c2, c3, c4, c5, c6, c7, c8)
+
+	// 								for r := 0; r < 10; r++ {
+	// 									if r == p || r == o || r == n || r == m || r == l || r == k || r == j || r == i {
+	// 										continue
+	// 									}
+	// 									c9 = r
+	// 									count++
+	// 									pos = writePossibleWord(pos, c1, c2, c3, c4, c5, c6, c7, c8, c9)
+
+	// 									for s := 0; s < 10; s++ {
+	// 										if s == r || s == p || s == o || s == n || s == m || s == l || s == k || s == j || s == i {
+	// 											continue
+	// 										}
+	// 										c10 = s
+	// 										count++
+	// 										pos = writePossibleWord(pos, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10)
+	// 									}
+	// 								}
+	// 							}
+	// 						}
+	// 					}
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// }
