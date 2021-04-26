@@ -103,6 +103,5 @@ Times are from an Intel 4930K clocked at 4.30% Ghz
 
 ## Conclusion
 
-Bruteforce is easy to implement and works well up words 8-chars long. However anything over that length we see exponential slowdown.  Using recursion to figure out all the permutations is  clearly the best way forward.  Although my recursion solution generetes some duplicated permutations, it is still a magnatide faster than the brute force solution.  23 seconds vs 881 ms. When trying to figure out why the recursion is generating more permutations I wrote the loops by hand and iterated exactly the number of times expected for a given length.  For the 9-char word the solution finished in 660 ms. Therefore the extra 1 million duplicated permutations cost in the vacinity of 200 ms when the generation permutation. This penatly is not see when traversing the tree in order to find words.  Both cases took 5.5 ms to complete.
-
+Bruteforce is easy to implement and works well up words 8-chars long. However anything over that length we see exponential slowdown.  Using recursion to figure out all the permutations is clearly the best way forward. 23 seconds vs 881 ms, it is a magnitude faster than the brute force solution. Intrisingly enough, this app needs more scaling when trying to deal with a 14-letter word. 
 
