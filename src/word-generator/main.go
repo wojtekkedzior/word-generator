@@ -10,6 +10,10 @@ import (
 	"unicode/utf8"
 )
 
+var pos [][]int
+var counters []int
+var count int
+
 func init() {
 }
 
@@ -17,26 +21,6 @@ type Node struct {
 	IsWord   bool
 	Value    rune
 	Childern map[rune]*Node
-}
-
-func containsIndex(s []int, index int) bool {
-	for _, v := range s {
-		if v == index {
-			return true
-		}
-	}
-
-	return false
-}
-
-func byteArrToString(byteArr []byte) string {
-	var b bytes.Buffer
-	for _, va := range byteArr {
-		r, _ := utf8.DecodeRune([]byte{va})
-		b.WriteRune(r)
-	}
-
-	return b.String()
 }
 
 func getNumberOfPermutations(length int) int {
@@ -65,8 +49,8 @@ func writePossibleWordArray(length int, indicies []int) {
 	pos = append(pos, res)
 }
 
-func run(length int, index int) {
-	if index == length {
+func run(length int, index int, limit int) {
+	if index == length || count == limit {
 		return
 	}
 
@@ -78,21 +62,16 @@ func run(length int, index int) {
 				break
 			}
 		}
-
 		if shouldContinue {
 			counters[index] = k
 			writePossibleWordArray(length, counters[0:index+1])
 			count++
-			run(length, index+1)
+			run(length, index+1, limit)
 		}
 	}
 }
 
-var pos [][]int
-var counters []int
-var count int
-
-func getPermutations(permCount int, str []byte) [][]int {
+func getPermutations(permCount int, str []byte) {
 	realPermCount := getNumberOfPermutations(len(str) + 1)
 	pos = make([][]int, 0, realPermCount)
 	start := time.Now()
@@ -104,73 +83,12 @@ func getPermutations(permCount int, str []byte) [][]int {
 	}
 
 	for i := 0; i < length; i++ {
-		run(length, i)
+		run(length, i, realPermCount)
 	}
 
 	fmt.Printf("Number of possibilites generated: %d \n", len(pos)) //this should match realPermCount.  The recursive call generetes extra, which is a buug
 	fmt.Printf("Number of iterations to generete all permutations: %d \n", count)
 	fmt.Printf("Time to generete all permutations %s \n", time.Since(start))
-
-	return pos
-}
-
-func bruteforce(str []byte) [][]int {
-
-	// rand.Seed(time.Now().UnixNano())
-	// strOri := str
-	realPermCount := getNumberOfPermutations(len(str) + 1)
-	pos = make([][]int, 0, realPermCount)
-
-	// posWord := make(map[string]int)
-	// var count = 0
-
-	// start := time.Now()
-
-	// for len(pos) < permCount {
-	// 	randWordSize := rand.Intn(len(str) + 1)
-
-	// 	if randWordSize == 0 {
-	// 		continue
-	// 	}
-
-	// 	word := make([]byte, randWordSize)
-	// 	wordAsIndexs := make([]int, randWordSize)
-
-	// 	//store used indexes. they cannot be repeated
-	// 	usedIndex := make([]int, randWordSize)
-
-	// 	for i, _ := range usedIndex {
-	// 		usedIndex[i] = -1
-	// 	}
-
-	// 	for i, _ := range word {
-	// 		index := rand.Intn(len(str))
-
-	// 		for containsIndex(usedIndex, index) {
-	// 			index = rand.Intn(len(str))
-	// 		}
-
-	// 		usedIndex[i] = index
-	// 		word[i] = str[index]
-	// 		wordAsIndexs[i] = index
-	// 	}
-
-	// 	wordAsStr := byteArrToString(word)
-
-	// 	if posWord[wordAsStr] != 1 {
-	// 		posWord[wordAsStr] = 1
-	// 		pos = append(pos, wordAsIndexs)
-	// 	}
-
-	// 	str = strOri
-	// 	count++
-	// }
-
-	// fmt.Printf("Number of possibilites generated: %d \n", len(pos))
-	// fmt.Printf("Number of Random iterations: %d \n", count)
-	// fmt.Printf("Figuring out all the permutations took %s \n", time.Since(start))
-
-	return pos
 }
 
 func (topParent Node) lookup(str []byte) {
@@ -178,10 +96,7 @@ func (topParent Node) lookup(str []byte) {
 	permCount := getNumberOfPermutations(len(str))
 
 	// work out all the possible permutations
-	pos := getPermutations(permCount, str)
-
-	//brute-force
-	//func bruteforce
+	getPermutations(permCount, str)
 
 	var foundWords sync.Map
 	var wg sync.WaitGroup
@@ -256,9 +171,10 @@ func (topParent Node) lookup(str []byte) {
 
 func main() {
 	// inputWord := "planets" // 7
-	// inputWord := "timers" // 4
+	// inputWord := "dogs" // 4
 	//	inputWord := "yoghurts" //8
 	inputWord := "youngster" //9
+	// inputWord := "abcdefghij" //9
 	var skippedDueToLength, skippedDueToChar = 0, 0
 
 	strDict := make(map[rune]int)
