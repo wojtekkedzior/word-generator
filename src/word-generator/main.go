@@ -10,18 +10,18 @@ import (
 	"unicode/utf8"
 )
 
-var pos [][]int
-var counters []int
-var count int
-
-func init() {
-}
-
+// Represents a char.  A link of Nodes can result in a word.
 type Node struct {
 	IsWord   bool
 	Value    rune
 	Childern map[rune]*Node
 }
+
+// Holds all of the permutaations
+var pos [][]int
+
+// One counter for each char in the word.  Each counter is max size of the word + 1 (an empty space)
+var counters []int
 
 func getNumberOfPermutations(length int) int {
 	var size = 0
@@ -38,7 +38,7 @@ func getNumberOfPermutations(length int) int {
 }
 
 func writePossibleWordArray(length int, indicies []int) {
-	res := make([]int, 0, length) //set capacity to max word size
+	res := make([]int, 0, length)
 
 	for _, v := range indicies {
 		if v != 0 {
@@ -49,7 +49,7 @@ func writePossibleWordArray(length int, indicies []int) {
 	pos = append(pos, res)
 }
 
-func run(length int, index int, limit int) {
+func run(length, index, limit, count int) {
 	if index == length || count == limit {
 		return
 	}
@@ -66,7 +66,7 @@ func run(length int, index int, limit int) {
 			counters[index] = k
 			writePossibleWordArray(length, counters[0:index+1])
 			count++
-			run(length, index+1, limit)
+			run(length, index+1, limit, count)
 		}
 	}
 }
@@ -74,19 +74,20 @@ func run(length int, index int, limit int) {
 func getPermutations(permCount int, str []byte) {
 	realPermCount := getNumberOfPermutations(len(str) + 1)
 	pos = make([][]int, 0, realPermCount)
-	start := time.Now()
 	length := len(str) + 1
 	counters = make([]int, length)
+	var count int
+	start := time.Now()
 
 	for i := 0; i < len(counters); i++ {
 		counters[i] = 0
 	}
 
 	for i := 0; i < length; i++ {
-		run(length, i, realPermCount)
+		run(length, i, realPermCount, count)
 	}
 
-	fmt.Printf("Number of possibilites generated: %d \n", len(pos)) //this should match realPermCount.  The recursive call generetes extra, which is a buug
+	fmt.Printf("Number of possibilites generated: %d \n", len(pos))
 	fmt.Printf("Number of iterations to generete all permutations: %d \n", count)
 	fmt.Printf("Time to generete all permutations %s \n", time.Since(start))
 }
@@ -103,16 +104,18 @@ func (topParent Node) lookup(str []byte) {
 
 	start := time.Now()
 
+	segmentSize := 10000
+
 	//each routine will process 1000 permutations
-	for index := 0; index <= permCount/10000; index++ {
+	for index := 0; index <= permCount/segmentSize; index++ {
 		wg.Add(1)
 
 		var end = 0
 		//On the last 1000 th step
-		if index == permCount%10000 {
+		if index == permCount%segmentSize {
 			end = permCount
 		} else {
-			end = (index + 1) * 10000
+			end = (index + 1) * segmentSize
 		}
 
 		go func(start, end int) {
@@ -151,11 +154,10 @@ func (topParent Node) lookup(str []byte) {
 
 				top = &topParent
 			}
-		}(index*10000, end)
+		}(index*segmentSize, end)
 	}
 
 	wg.Wait()
-
 	fmt.Printf("Traversing tree took %s \n", time.Since(start))
 
 	//sync.Map doesn't have a way of revealing it's size, so have to convert it to a normal map or list
