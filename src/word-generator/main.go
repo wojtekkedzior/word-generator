@@ -17,10 +17,22 @@ type Node struct {
 	Childern map[rune]*Node
 }
 
-// Holds all of the permutaations
-var pos [][]int
+// Holds all of the permutations
+var permutations [][]int
 
-// One counter for each char in the word.  Each counter is max size of the word + 1 (an empty space)
+/*
+ One counter for each char in the word.  Each counter is max size of the word + 1 (an empty space).
+ The counters can be thought of as number wheel on a padlock:
+
+   1 3 2
+   2 4 3
+ [ 3 5 4 ]  <- we are only looking at the alignment of numbers here.  We spin each wheel one digit at a time and take the value
+   4 6 5
+   5 7 6
+
+  The permutations are actually indexes of the array that holds the word.
+  This way we can convert each permutation into char quickly.
+*/
 var counters []int
 
 func getNumberOfPermutations(length int) int {
@@ -37,7 +49,7 @@ func getNumberOfPermutations(length int) int {
 	return size
 }
 
-func writePossibleWordArray(length int, indicies []int) {
+func savePermutations(length int, indicies []int) {
 	res := make([]int, 0, length)
 
 	for _, v := range indicies {
@@ -46,7 +58,7 @@ func writePossibleWordArray(length int, indicies []int) {
 		}
 	}
 
-	pos = append(pos, res)
+	permutations = append(permutations, res)
 }
 
 func run(length, index, limit, count int) {
@@ -64,7 +76,7 @@ func run(length, index, limit, count int) {
 		}
 		if shouldContinue {
 			counters[index] = k
-			writePossibleWordArray(length, counters[0:index+1])
+			savePermutations(length, counters[0:index+1])
 			count++
 			run(length, index+1, limit, count)
 		}
@@ -73,10 +85,9 @@ func run(length, index, limit, count int) {
 
 func getPermutations(permCount int, str []byte) {
 	realPermCount := getNumberOfPermutations(len(str) + 1)
-	pos = make([][]int, 0, realPermCount)
+	permutations = make([][]int, 0, realPermCount)
 	length := len(str) + 1
 	counters = make([]int, length)
-	var count int
 	start := time.Now()
 
 	for i := 0; i < len(counters); i++ {
@@ -84,11 +95,10 @@ func getPermutations(permCount int, str []byte) {
 	}
 
 	for i := 0; i < length; i++ {
-		run(length, i, realPermCount, count)
+		run(length, i, realPermCount, 0)
 	}
 
-	fmt.Printf("Number of possibilites generated: %d \n", len(pos))
-	fmt.Printf("Number of iterations to generete all permutations: %d \n", count)
+	fmt.Printf("Number of possibilites generated: %d \n", len(permutations))
 	fmt.Printf("Time to generete all permutations %s \n", time.Since(start))
 }
 
@@ -122,7 +132,7 @@ func (topParent Node) lookup(str []byte) {
 			defer wg.Done()
 			top := &topParent
 
-			for _, v := range pos[start:end] {
+			for _, v := range permutations[start:end] {
 				var exist = false
 
 				for i, vr := range v {
