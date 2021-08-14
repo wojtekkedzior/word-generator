@@ -33,7 +33,15 @@ Initially I figured that brute forcing all the permuatation would be done within
 
 This appraoch tries to minimize the number of iterations so that they match the number of permutations.  In other words each cycle should generete a new and unique permutation. 
 
+
 ## Results
+
+
+|   |   |   |   |   |
+|---|---|---|---|---|
+|   |   |   |   |   |
+|   |   |   |   |   |
+|   |   |   |   |   |
 
 The results are broken down by CPU and method.  I've selected a 9-character long word for the test.
 
