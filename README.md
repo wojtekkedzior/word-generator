@@ -37,11 +37,11 @@ This appraoch tries to minimize the number of iterations so that they match the 
 ## Results
 
 
-|   |   |   |   |   |
-|---|---|---|---|---|
-|   |   |   |   |   |
-|   |   |   |   |   |
-|   |   |   |   |   |
+| CPU | method | word (length) | # of possible permutations | # of iterations | time of iterations | # words |
+|---|---|---|---|---|---|---|
+| 4930K $.30Ghz | brute force | youngster (9) | 986409 | 39691600 |34.957715773s | 264 |
+|   |   |   |   |   |---|---|
+|   |   |   |   |   |---|---|
 
 The results are broken down by CPU and method.  I've selected a 9-character long word for the test.
 

@@ -190,7 +190,7 @@ func main() {
 func serveContent(w http.ResponseWriter, r *http.Request) {
 	// fmt.Println(os.Args[0])
 	// inputWord := os.Args[1]
-	inputWord := "builds" //9
+	inputWord := "youngster" //9
 	// inputWord := "youngster" //9
 
 	if len(os.Args) > 2 {
