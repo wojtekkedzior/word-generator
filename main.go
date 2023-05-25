@@ -113,6 +113,8 @@ func (topParent Node) lookup(str []byte, segmentSize int) {
 	// work out all the possible permutations
 	permutations := getPermutations(permCount, str)
 
+	// fmt.Println(permutations)
+
 	var foundWords sync.Map
 	var wg sync.WaitGroup
 
@@ -190,7 +192,9 @@ func main() {
 func serveContent(w http.ResponseWriter, r *http.Request) {
 	// fmt.Println(os.Args[0])
 	// inputWord := os.Args[1]
-	inputWord := "youngster" //9
+	inputWord := "planets"
+	// inputWord := "hi"
+	// inputWord := "youngster" //9
 	// inputWord := "youngster" //9
 
 	if len(os.Args) > 2 {
@@ -208,11 +212,6 @@ func serveContent(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println(segmentSize)
 
-	// inputWord := "planets" // 7
-	// inputWord := "dogs" // 4
-	//	inputWord := "yoghurts" //8
-	// inputWord := "youngster" //9
-	// inputWord := "abcdefghij" //9
 	var skippedDueToLength, skippedDueToChar = 0, 0
 
 	strDict := make(map[rune]int)
