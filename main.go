@@ -195,7 +195,6 @@ func serveContent(w http.ResponseWriter, r *http.Request) {
 	inputWord := "planets"
 	// inputWord := "hi"
 	// inputWord := "youngster" //9
-	// inputWord := "youngster" //9
 
 	if len(os.Args) > 2 {
 		src := os.Args[2]
