@@ -4,15 +4,18 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"net/http"
 	"os"
-	"strconv"
 	"sync"
 	"time"
 	"unicode/utf8"
 )
 
-var segmentSize = 10000
+// var segmentSize = 10000
+var lengthPlusSpace, iterations, words = 0, 0, 0
+
+var foundWords sync.Map
+var wg sync.WaitGroup
+var results = make(chan []int, 10000)
 
 // Represents a char.  A link of Nodes can result in a word.
 type Node struct {
@@ -35,143 +38,91 @@ func getNumberOfPermutations(length int) int {
 	return size
 }
 
-func savePermutations(length int, indicies []int, permutations [][]int) [][]int {
-	res := make([]int, 0, length)
-
-	for _, v := range indicies {
-		if v != 0 {
-			res = append(res, (v - 1))
-		}
+func run(index int, counters []int, c chan []int) {
+	if index == lengthPlusSpace {
+		return
 	}
 
-	permutations = append(permutations, res)
-	return permutations
-}
-
-func run(length, index, limit, count int, permutations [][]int, counters []int) [][]int {
-	if index == length || count == limit {
-		return permutations
-	}
-
-	for k := 0; k < length; k++ {
-		shouldContinue := true
-		for j := 0; j < index; j++ {
-			if k == counters[j] {
+	for j := 0; j < lengthPlusSpace; j++ {
+		shouldContinue := true //skipping 'self'
+		for k := 0; k < index; k++ {
+			if j == counters[k] {
 				shouldContinue = false
 				break
 			}
 		}
 		if shouldContinue {
-			counters[index] = k
-			permutations = savePermutations(length, counters[0:index+1], permutations)
-			count++
-			permutations = run(length, index+1, limit, count, permutations, counters)
+			counters[index] = j
+
+			permutation := make([]int, 0, lengthPlusSpace)
+			for _, v := range counters[0 : index+1] {
+				if v != 0 { //effectively trimming
+					permutation = append(permutation, (v - 1))
+				}
+			}
+
+			c <- permutation
+			run(index+1, counters, c)
 		}
 	}
-
-	return permutations
 }
 
-func getPermutations(permCount int, str []byte) [][]int {
-	realPermCount := getNumberOfPermutations(len(str) + 1)
-	permutations := make([][]int, 0, realPermCount)
-	length := len(str) + 1
+func (topParent Node) lookup(str []byte) {
+	//+1 for the extra space char
+	lengthPlusSpace = len(str) + 1
+
+	//work out the number of all possible permutations
+	getNumberOfPermutations(len(str))
+
+	// work out all the possible permutations
+	getNumberOfPermutations(lengthPlusSpace)
+
 	start := time.Now()
 
-	/*
-	 One counter for each char in the word.  Each counter is max size of the word + 1 (an empty space).
-	 The counters can be thought of as number wheel on a padlock:
-
-	   1 3 2
-	   2 4 3
-	 [ 3 5 4 ]  <- we are only looking at the alignment of numbers here.  We spin each wheel one digit at a time and take the value
-	   4 6 5
-	   5 7 6
-
-	  The permutations are actually indexes of the array that holds the word.
-	  This way we can convert each permutation into char quickly.
-	*/
-	counters := make([]int, length)
-
-	for i := 0; i < len(counters); i++ {
-		counters[i] = 0
-	}
-
-	for i := 0; i < length; i++ {
-		permutations = run(length, i, realPermCount, 0, permutations, counters)
-	}
-
-	fmt.Printf("Number of possibilites generated: %d \n", len(permutations))
-	fmt.Printf("Time to generete all permutations %s \n", time.Since(start))
-
-	return permutations
-}
-
-func (topParent Node) lookup(str []byte, segmentSize int) {
-	//work out the number of all possible permutations
-	permCount := getNumberOfPermutations(len(str))
-	// work out all the possible permutations
-	permutations := getPermutations(permCount, str)
-
-	var foundWords sync.Map
-	var wg sync.WaitGroup
-
-	startTime := time.Now()
-
-	for index := 0; index <= permCount/segmentSize; index++ {
+	for i := 0; i < lengthPlusSpace; i++ {
 		wg.Add(1)
+		go func(index int) {
+			defer wg.Done()
+			counters := make([]int, lengthPlusSpace)
+			run(index, counters, results)
+		}(i)
+	}
 
-		var end = 0
-		//On the last 1000 th step
-		if index == permCount%segmentSize {
-			end = permCount
-		} else {
-			end = (index + 1) * segmentSize
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	for permutation := range results {
+		iterations++
+
+		top := &topParent
+
+		for i, vr := range permutation {
+			r, _ := utf8.DecodeRune([]byte{str[vr]})
+			n := top.Childern[r]
+
+			if n == nil {
+				break
+			} else if i == len(permutation)-1 && n.IsWord { // is this a short word?
+				var b bytes.Buffer
+
+				for _, va := range permutation {
+					r, _ := utf8.DecodeRune([]byte{str[va]})
+					b.WriteRune(r)
+				}
+
+				foundWords.Store(b.String(), 1)
+				words++
+				break
+			} else {
+				top = top.Childern[r]
+			}
 		}
 
-		go func(start, end int) {
-			defer wg.Done()
-			top := &topParent
-
-			for _, v := range permutations[start:end] {
-				var exist = false
-
-				for i, vr := range v {
-					r, _ := utf8.DecodeRune([]byte{str[vr]})
-					n := top.Childern[r]
-
-					if n == nil {
-						exist = false
-						break
-					} else if i == len(v)-1 && n.IsWord { // is this a short word?
-						exist = true
-						break
-					} else {
-						top = top.Childern[r]
-					}
-				}
-
-				if exist {
-					var b bytes.Buffer
-
-					for _, va := range v {
-						r, _ := utf8.DecodeRune([]byte{str[va]})
-						b.WriteRune(r)
-					}
-
-					foundWords.Store(b.String(), 1)
-					exist = false
-				}
-
-				top = &topParent
-			}
-		}(index*segmentSize, end)
+		top = &topParent
 	}
 
-	wg.Wait()
-	fmt.Printf("Traversing tree took %s \n", time.Since(startTime))
-
-	//sync.Map doesn't have a way of revealing it's size, so have to convert it to a normal map or list
 	var finalResult []string
 
 	foundWords.Range(func(key, value interface{}) bool {
@@ -179,44 +130,26 @@ func (topParent Node) lookup(str []byte, segmentSize int) {
 		return true
 	})
 
-	fmt.Printf("Found a total of %d words.", len(finalResult))
+	fmt.Printf("Found a total of %d words. \n", len(finalResult))
+	fmt.Println(iterations)
+	fmt.Println(words)
+	// fmt.Printf("Number of possibilites generated: %d \n", len(permutations))
+	fmt.Printf("Time to generete all permutations %s \n", time.Since(start))
 }
 
 func main() {
-	http.HandleFunc("/", serveContent)
-	http.ListenAndServe(":8081", nil)
-}
-
-func serveContent(w http.ResponseWriter, r *http.Request) {
-	// fmt.Println(os.Args[0])
-	// inputWord := os.Args[1]
-	inputWord := "youngster" //9
+	// inputWord := "proselytize" //11
+	// inputWord := "abandonwares" //12
+	// inputWord := "ventriloquizes" //14
+	inputWord := "kaiserdoms" //10
+	// inputWord := "Counterrevolutionary" //20 - 6613313319248080000 possibilites :D
+	// inputWord := "planets" //7
 	// inputWord := "youngster" //9
+	// inputWord := "or" //9
 
-	if len(os.Args) > 2 {
-		src := os.Args[2]
-
-		if src != "" {
-			var err error
-			segmentSize, err = strconv.Atoi(src)
-
-			if err != nil {
-				segmentSize = 1000
-			}
-		}
-	}
-
-	fmt.Println(segmentSize)
-
-	// inputWord := "planets" // 7
-	// inputWord := "dogs" // 4
-	//	inputWord := "yoghurts" //8
-	// inputWord := "youngster" //9
-	// inputWord := "abcdefghij" //9
 	var skippedDueToLength, skippedDueToChar = 0, 0
 
 	strDict := make(map[rune]int)
-
 	for _, v := range inputWord {
 		strDict[v] = 1
 	}
@@ -267,6 +200,36 @@ func serveContent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Printf("Skipped because of length: %d, Skipped because chars don't exist in provided word: %d.  Total skipped: %d \n", skippedDueToLength, skippedDueToChar, (skippedDueToChar + skippedDueToLength))
-	topParent.lookup([]byte(inputWord), segmentSize)
-	w.Write([]byte("asdasd"))
+	topParent.lookup([]byte(inputWord))
 }
+
+/*
+ One counter for each char in the word.  Each counter is max size of the word + 1 (an empty space).
+ The counters can be thought of as number wheel on a padlock:
+
+   1 3 2
+   2 4 3
+ [ 3 5 4 ]  <- we are only looking at the alignment of numbers here.  We spin each wheel one digit at a time and take the value
+   4 6 5
+   5 7 6
+
+  The permutations are actually indexes of the array that holds the word.
+  This way we can convert each permutation into char quickly.
+*/
+
+// func test(c chan int) int {
+// 	mycount := 0
+// 	for i := 0; i < 1000000; i++ {
+// 		// count++
+// 		c <- i
+// 		mycount++
+// 	}
+// 	return mycount
+// }
+
+// for complete != 8 {
+// 	select {
+// 	case <-c:
+// 		// fmt.Println(complete)
+// 	}
+// }
