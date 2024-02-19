@@ -24,7 +24,7 @@ type Node struct {
 	Childern map[rune]*Node
 }
 
-func getNumberOfPermutations(length int) int {
+func getNumberOfPermutations(length int) {
 	var size = 0
 	for i := length; i > 0; i-- {
 		var p = 1
@@ -35,7 +35,6 @@ func getNumberOfPermutations(length int) int {
 	}
 
 	fmt.Printf("Number of possibilities for length of %d is %d \n", length, size)
-	return size
 }
 
 func run(index int, counters []int, c chan []int) {
@@ -141,10 +140,10 @@ func main() {
 	// inputWord := "proselytize" //11
 	// inputWord := "abandonwares" //12
 	// inputWord := "ventriloquizes" //14
-	inputWord := "kaiserdoms" //10
+	// inputWord := "kaiserdoms" //10
 	// inputWord := "Counterrevolutionary" //20 - 6613313319248080000 possibilites :D
 	// inputWord := "planets" //7
-	// inputWord := "youngster" //9
+	inputWord := "youngster" //9
 	// inputWord := "or" //9
 
 	var skippedDueToLength, skippedDueToChar = 0, 0
