@@ -3,16 +3,28 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
-	"net/http"
+	"log"
 	"os"
 	"strconv"
 	"sync"
 	"time"
-	"unicode/utf8"
+
+	"github.com/apache/pulsar-client-go/pulsar"
 )
 
-var segmentSize = 10000
+var lengthPlusSpace, iterations, words = 0, 0, 0
+
+var foundWords sync.Map
+var wg sync.WaitGroup
+var bufferSize = 200
+
+var numOfResults = 10000
+
+var client pulsar.Client
+var err error
 
 // Represents a char.  A link of Nodes can result in a word.
 type Node struct {
@@ -21,7 +33,30 @@ type Node struct {
 	Childern map[rune]*Node
 }
 
-func getNumberOfPermutations(length int) int {
+type Permutations struct {
+	Permutations []perm `json:"permutations,omitempty"`
+}
+
+type perm struct {
+	Permutation string `json:"permutation,omitempty"`
+}
+
+func init() {
+	client, err = pulsar.NewClient(pulsar.ClientOptions{
+		URL:                     "pulsar://192.168.122.10:4002",
+		OperationTimeout:        30 * time.Second,
+		ConnectionTimeout:       30 * time.Second,
+		MaxConnectionsPerBroker: 10,
+	})
+
+	if err != nil {
+		fmt.Println("Failed to create client", err)
+	}
+
+	defer client.Close()
+}
+
+func getNumberOfPermutations(length int) {
 	var size = 0
 	for i := length; i > 0; i-- {
 		var p = 1
@@ -32,148 +67,159 @@ func getNumberOfPermutations(length int) int {
 	}
 
 	fmt.Printf("Number of possibilities for length of %d is %d \n", length, size)
-	return size
 }
 
-func savePermutations(length int, indicies []int, permutations [][]int) [][]int {
-	res := make([]int, 0, length)
-
-	for _, v := range indicies {
-		if v != 0 {
-			res = append(res, (v - 1))
-		}
+// index   -
+// counter -
+// results - a channel where a message container multiple permutations will be written to.
+// buffer  - contains each permutation as a comma delimited string of integers
+// permutations - holds a list of Permutations. The array is marshaled into JSON when the array size exceeds the "bufferSize"
+// permutation  - an array of indexes representing a single permutation. This array is cleared after the generated permutation is passed on.
+func run(index int, counters []int, results chan string, buffer *bytes.Buffer, permutations *Permutations, permutation []int) {
+	if index == lengthPlusSpace {
+		return
 	}
 
-	permutations = append(permutations, res)
-	return permutations
-}
-
-func run(length, index, limit, count int, permutations [][]int, counters []int) [][]int {
-	if index == length || count == limit {
-		return permutations
-	}
-
-	for k := 0; k < length; k++ {
-		shouldContinue := true
-		for j := 0; j < index; j++ {
-			if k == counters[j] {
+	for j := 0; j < lengthPlusSpace; j++ {
+		shouldContinue := true //skipping 'self'
+		for k := 0; k < index; k++ {
+			if j == counters[k] {
 				shouldContinue = false
 				break
 			}
 		}
 		if shouldContinue {
-			counters[index] = k
-			permutations = savePermutations(length, counters[0:index+1], permutations)
-			count++
-			permutations = run(length, index+1, limit, count, permutations, counters)
+			counters[index] = j
+
+			for _, v := range counters[0 : index+1] {
+				if v != 0 { //effectively trimming
+					permutation = append(permutation, (v - 1))
+				}
+			}
+
+			for _, i := range permutation {
+				buffer.WriteString(strconv.Itoa(i))
+				buffer.WriteString(",")
+			}
+
+			permutations.Permutations = append(permutations.Permutations, perm{Permutation: buffer.String()})
+			buffer.Reset()
+			permutation = permutation[:0]
+
+			if len(permutations.Permutations) > bufferSize {
+				jsonData, err := json.Marshal(permutations)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				results <- string(jsonData)
+
+				permutations.Permutations = permutations.Permutations[:0]
+			}
+
+			run(index+1, counters, results, buffer, permutations, permutation)
 		}
 	}
-
-	return permutations
 }
 
-func getPermutations(permCount int, str []byte) [][]int {
-	realPermCount := getNumberOfPermutations(len(str) + 1)
-	permutations := make([][]int, 0, realPermCount)
-	length := len(str) + 1
+func createChannelReader(id int) chan string {
+	var results = make(chan string, numOfResults)
+	var producer pulsar.Producer
+
+	go func(id int) {
+		producer, err = client.CreateProducer(pulsar.ProducerOptions{
+			Topic:                   "t/ns/mercury",
+			BatchingMaxPublishDelay: 10 * time.Millisecond, // Maximum time to wait for batching
+			BatchingMaxMessages:     uint(500),             // Maximum number of messages in a batch
+			BatchingMaxSize:         1024 * 1024 * 10,      // Maximum size of batch (10MB)
+			Name:                    fmt.Sprintf("producer-for-channel-%v", +id),
+		})
+
+		if err != nil {
+			fmt.Println("Failed to create producer: ", err)
+		}
+
+		defer producer.Close()
+
+		for msg := range results {
+			producer.SendAsync(context.Background(), &pulsar.ProducerMessage{
+				Payload: []byte(msg),
+			}, func(msgID pulsar.MessageID, msg *pulsar.ProducerMessage, err error) {
+				if err != nil {
+					fmt.Printf("Failed to send message: %v", err)
+					return
+				}
+			})
+		}
+
+		close(results)
+	}(id)
+
+	return results
+}
+
+func (topParent Node) lookup(str []byte) {
+	//+1 for the extra space char
+	lengthPlusSpace = len(str) + 1
+
+	//work out the number of all possible permutations
+	getNumberOfPermutations(len(str))
+
+	// work out all the possible permutations
+	getNumberOfPermutations(lengthPlusSpace)
+
 	start := time.Now()
 
-	/*
-	 One counter for each char in the word.  Each counter is max size of the word + 1 (an empty space).
-	 The counters can be thought of as number wheel on a padlock:
-
-	   1 3 2
-	   2 4 3
-	 [ 3 5 4 ]  <- we are only looking at the alignment of numbers here.  We spin each wheel one digit at a time and take the value
-	   4 6 5
-	   5 7 6
-
-	  The permutations are actually indexes of the array that holds the word.
-	  This way we can convert each permutation into char quickly.
-	*/
-	counters := make([]int, length)
-
-	for i := 0; i < len(counters); i++ {
-		counters[i] = 0
-	}
-
-	for i := 0; i < length; i++ {
-		permutations = run(length, i, realPermCount, 0, permutations, counters)
-	}
-
-	fmt.Printf("Number of possibilites generated: %d \n", len(permutations))
-	fmt.Printf("Time to generete all permutations %s \n", time.Since(start))
-
-	return permutations
-}
-
-func (topParent Node) lookup(str []byte, segmentSize int) {
-	//work out the number of all possible permutations
-	permCount := getNumberOfPermutations(len(str))
-	// work out all the possible permutations
-	permutations := getPermutations(permCount, str)
-
-	// fmt.Println(permutations)
-
-	var foundWords sync.Map
-	var wg sync.WaitGroup
-
-	startTime := time.Now()
-
-	for index := 0; index <= permCount/segmentSize; index++ {
+	for i := 0; i < lengthPlusSpace; i++ {
 		wg.Add(1)
 
-		var end = 0
-		//On the last 1000 th step
-		if index == permCount%segmentSize {
-			end = permCount
-		} else {
-			end = (index + 1) * segmentSize
-		}
-
-		go func(start, end int) {
+		go func(index int) {
 			defer wg.Done()
-			top := &topParent
+			counters := make([]int, lengthPlusSpace)
+			results := createChannelReader(index)
 
-			for _, v := range permutations[start:end] {
-				var exist = false
+			// var permutations Permutations
+			permutations := &Permutations{}
 
-				for i, vr := range v {
-					r, _ := utf8.DecodeRune([]byte{str[vr]})
-					n := top.Childern[r]
+			permutation := make([]int, 0, lengthPlusSpace)
 
-					if n == nil {
-						exist = false
-						break
-					} else if i == len(v)-1 && n.IsWord { // is this a short word?
-						exist = true
-						break
-					} else {
-						top = top.Childern[r]
-					}
-				}
-
-				if exist {
-					var b bytes.Buffer
-
-					for _, va := range v {
-						r, _ := utf8.DecodeRune([]byte{str[va]})
-						b.WriteRune(r)
-					}
-
-					foundWords.Store(b.String(), 1)
-					exist = false
-				}
-
-				top = &topParent
-			}
-		}(index*segmentSize, end)
+			buffer := bytes.NewBuffer(make([]byte, 0, bufferSize))
+			run(index, counters, results, buffer, permutations, permutation)
+		}(i)
 	}
 
 	wg.Wait()
-	fmt.Printf("Traversing tree took %s \n", time.Since(startTime))
 
-	//sync.Map doesn't have a way of revealing it's size, so have to convert it to a normal map or list
+	// for permutation := range results {
+	// 	iterations++
+
+	// 	top := &topParent
+
+	// 	for i, vr := range permutation {
+	// 		r, _ := utf8.DecodeRune([]byte{str[vr]})
+	// 		n := top.Childern[r]
+
+	// 		if n == nil {
+	// 			break
+	// 		} else if i == len(permutation)-1 && n.IsWord { // is this a short word?
+	// 			var b bytes.Buffer
+
+	// 			for _, va := range permutation {
+	// 				r, _ := utf8.DecodeRune([]byte{str[va]})
+	// 				b.WriteRune(r)
+	// 			}
+
+	// 			foundWords.Store(b.String(), 1)
+	// 			words++
+	// 			break
+	// 		} else {
+	// 			top = top.Childern[r]
+	// 		}
+	// 	}
+
+	// 	top = &topParent
+	// }
+
 	var finalResult []string
 
 	foundWords.Range(func(key, value interface{}) bool {
@@ -181,40 +227,27 @@ func (topParent Node) lookup(str []byte, segmentSize int) {
 		return true
 	})
 
-	fmt.Printf("Found a total of %d words.", len(finalResult))
+	fmt.Printf("Found a total of %d words. \n", len(finalResult))
+	fmt.Println(iterations)
+	fmt.Println(words)
+	// fmt.Printf("Number of possibilites generated: %d \n", len(permutations))
+	fmt.Printf("Time to generete all permutations %s \n", time.Since(start))
 }
 
 func main() {
-	http.HandleFunc("/", serveContent)
-	http.ListenAndServe(":8081", nil)
-}
-
-func serveContent(w http.ResponseWriter, r *http.Request) {
-	// fmt.Println(os.Args[0])
-	// inputWord := os.Args[1]
-	inputWord := "planets"
-	// inputWord := "hi"
+	inputWord := "proselytize" //11
+	// inputWord := "abandonwares" //12
+	// inputWord := "ventriloquizes" //14
+	// inputWord := "kaiserdoms" //10
+	// inputWord := "Counterrevolutionary" //20 - 6613313319248080000 possibilites :D
+	// inputWord := "planets" //7
 	// inputWord := "youngster" //9
-
-	if len(os.Args) > 2 {
-		src := os.Args[2]
-
-		if src != "" {
-			var err error
-			segmentSize, err = strconv.Atoi(src)
-
-			if err != nil {
-				segmentSize = 1000
-			}
-		}
-	}
-
-	fmt.Println(segmentSize)
+	// inputWord := "or" //9
+	// inputWord := "helper"
 
 	var skippedDueToLength, skippedDueToChar = 0, 0
 
 	strDict := make(map[rune]int)
-
 	for _, v := range inputWord {
 		strDict[v] = 1
 	}
@@ -265,6 +298,19 @@ func serveContent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Printf("Skipped because of length: %d, Skipped because chars don't exist in provided word: %d.  Total skipped: %d \n", skippedDueToLength, skippedDueToChar, (skippedDueToChar + skippedDueToLength))
-	topParent.lookup([]byte(inputWord), segmentSize)
-	w.Write([]byte("asdasd"))
+	topParent.lookup([]byte(inputWord))
 }
+
+/*
+ One counter for each char in the word.  Each counter is max size of the word + 1 (an empty space).
+ The counters can be thought of as number wheel on a padlock:
+
+   1 3 2
+   2 4 3
+ [ 3 5 4 ]  <- we are only looking at the alignment of numbers here.  We spin each wheel one digit at a time and take the value
+   4 6 5
+   5 7 6
+
+  The permutations are actually indexes of the array that holds the word.
+  This way we can convert each permutation into char quickly.
+*/
