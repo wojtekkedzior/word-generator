@@ -74,8 +74,7 @@ func getNumberOfPermutations(length int) {
 // results - a channel where a message container multiple permutations will be written to.
 // buffer  - contains each permutation as a comma delimited string of integers
 // permutations - holds a list of Permutations. The array is marshaled into JSON when the array size exceeds the "bufferSize"
-// permutation  - an array of indexes representing a single permutation. This array is cleared after the generated permutation is passed on.
-func run(index int, counters []int, results chan string, buffer *bytes.Buffer, permutations *Permutations, permutation []int) {
+func run(index int, counters []int, results chan string, buffer *bytes.Buffer, permutations *Permutations) {
 	if index == lengthPlusSpace {
 		return
 	}
@@ -93,18 +92,13 @@ func run(index int, counters []int, results chan string, buffer *bytes.Buffer, p
 
 			for _, v := range counters[0 : index+1] {
 				if v != 0 { //effectively trimming
-					permutation = append(permutation, (v - 1))
+					buffer.WriteString(strconv.Itoa((v - 1)))
+					buffer.WriteString(",")
 				}
-			}
-
-			for _, i := range permutation {
-				buffer.WriteString(strconv.Itoa(i))
-				buffer.WriteString(",")
 			}
 
 			permutations.Permutations = append(permutations.Permutations, perm{Permutation: buffer.String()})
 			buffer.Reset()
-			permutation = permutation[:0]
 
 			if len(permutations.Permutations) > bufferSize {
 				jsonData, err := json.Marshal(permutations)
@@ -117,7 +111,7 @@ func run(index int, counters []int, results chan string, buffer *bytes.Buffer, p
 				permutations.Permutations = permutations.Permutations[:0]
 			}
 
-			run(index+1, counters, results, buffer, permutations, permutation)
+			run(index+1, counters, results, buffer, permutations)
 		}
 	}
 }
@@ -181,10 +175,8 @@ func (topParent Node) lookup(str []byte) {
 			// var permutations Permutations
 			permutations := &Permutations{}
 
-			permutation := make([]int, 0, lengthPlusSpace)
-
 			buffer := bytes.NewBuffer(make([]byte, 0, bufferSize))
-			run(index, counters, results, buffer, permutations, permutation)
+			run(index, counters, results, buffer, permutations)
 		}(i)
 	}
 
@@ -235,10 +227,10 @@ func (topParent Node) lookup(str []byte) {
 }
 
 func main() {
-	// inputWord := "proselytize" //11
+	inputWord := "proselytize" //11
 	// inputWord := "abandonwares" //12
 	// inputWord := "ventriloquizes" //14
-	inputWord := "kaiserdoms" //10
+	// inputWord := "kaiserdoms" //10
 	// inputWord := "Counterrevolutionary" //20 - 6613313319248080000 possibilites :D
 	// inputWord := "planets" //7
 	// inputWord := "youngster" //9
