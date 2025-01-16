@@ -34,6 +34,16 @@ This appraoch tries to minimize the number of iterations so that they match the 
 
 ## Results
 
+
+
+|   |   |   |   |   |
+|---|-d--|---|---|---|
+|   |  d |   |   |   |
+|   | d |   |   |   |
+|   | d  |   |   |   |
+
+
+
 The results are broken down by CPU and method.  I've selected a 9-character long word for the test.
 
 ### "youngster" - brute force - Intel 4930K clocked at 4.30 GHz 
