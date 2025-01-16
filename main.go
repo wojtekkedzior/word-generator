@@ -235,10 +235,10 @@ func (topParent Node) lookup(str []byte) {
 }
 
 func main() {
-	inputWord := "proselytize" //11
+	// inputWord := "proselytize" //11
 	// inputWord := "abandonwares" //12
 	// inputWord := "ventriloquizes" //14
-	// inputWord := "kaiserdoms" //10
+	inputWord := "kaiserdoms" //10
 	// inputWord := "Counterrevolutionary" //20 - 6613313319248080000 possibilites :D
 	// inputWord := "planets" //7
 	// inputWord := "youngster" //9

@@ -15,6 +15,9 @@ sudo docker tag wg:latest public.ecr.aws/y7c9l5j8/wg:latest
 sudo docker push public.ecr.aws/y7c9l5j8/wg:latest
 
 
+#  go build -o word-generator  && time ./word-generator
+
+
 # sudo docker run -it -p 80:8081 wg:latest
 
 # worker-1-large
