@@ -26,7 +26,7 @@ Therefore, all the letters that make up the word "planets" can be arranged in 13
 
 ### Brute force
 
-Initially I figured that brute forcing all the permuatation could be done within a reasonable amount of time, however soon enough it dawned on me that as the sample size increases the brute force approach grows expenentially inefficent. This is becuase after some time it starts to generete already identified permutations making it less and less likely to find the missing ones. In other words the chances of genereting the very last permutation is about the same as the second permutation being exactly the same as the very first one.  This way the odds of finding the very last permutation decrease significantly as the word size increases. With small word sizes this is not a problem. 
+Initially I figured that brute forcing all the permutations could be done within a reasonable amount of time, however soon enough it dawned on me that as the sample size increases the brute force approach grows exponentially inefficient. This is because after some time it starts to generate already identified permutations making it less and less likely to find the missing ones. In other words the chances of generating the very last permutation is about the same as the second permutation being exactly the same as the very first one.  This way the odds of finding the very last permutation decrease significantly as the word size increases. With small word sizes this is not a problem. 
 
 ### Recursion
 
