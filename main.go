@@ -1,13 +1,11 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -15,9 +13,10 @@ import (
 	"github.com/apache/pulsar-client-go/pulsar"
 )
 
-var lengthPlusSpace, iterations, words = 0, 0, 0
+// TODO - actualPermutations is always more than what is expected. For example for the word 'planets', it being a word of 7 characters, we get a maximum permutation count of 109600 (7+1 for the space). But actual count is 135411, which is wrong.
+// this can be seen with the inputword of 3 letters, such as 'pot' Some permutation appear three times.
+var lengthPlusSpace, actualPermutations = 0, 0
 
-var foundWords sync.Map
 var wg sync.WaitGroup
 var bufferSize = 200
 
@@ -27,11 +26,11 @@ var client pulsar.Client
 var err error
 
 // Represents a char.  A link of Nodes can result in a word.
-type Node struct {
-	IsWord   bool
-	Value    rune
-	Childern map[rune]*Node
-}
+// type Node struct {
+// 	IsWord   bool
+// 	Value    rune
+// 	Childern map[rune]*Node
+// }
 
 type Permutations struct {
 	Permutations []perm `json:"permutations,omitempty"`
@@ -96,7 +95,7 @@ func run(index int, counters []int, results chan string, buffer *bytes.Buffer, p
 					buffer.WriteString(",")
 				}
 			}
-
+			actualPermutations++
 			permutations.Permutations = append(permutations.Permutations, perm{Permutation: buffer.String()})
 			buffer.Reset()
 
@@ -124,8 +123,8 @@ func createChannelReader(id int) chan string {
 		producer, err = client.CreateProducer(pulsar.ProducerOptions{
 			Topic:                   "t/ns/mercury",
 			BatchingMaxPublishDelay: 10 * time.Millisecond, // Maximum time to wait for batching
-			BatchingMaxMessages:     uint(500),             // Maximum number of messages in a batch
-			BatchingMaxSize:         1024 * 1024 * 10,      // Maximum size of batch (10MB)
+			BatchingMaxMessages:     uint(600),             // Maximum number of messages in a batch
+			BatchingMaxSize:         1024 * 1024 * 5,       // Maximum size of batch (10MB)
 			Name:                    fmt.Sprintf("producer-for-channel-%v", +id),
 		})
 
@@ -152,7 +151,7 @@ func createChannelReader(id int) chan string {
 	return results
 }
 
-func (topParent Node) lookup(str []byte) {
+func lookup(str []byte) {
 	//+1 for the extra space char
 	lengthPlusSpace = len(str) + 1
 
@@ -181,6 +180,93 @@ func (topParent Node) lookup(str []byte) {
 	}
 
 	wg.Wait()
+
+	fmt.Printf("actual number of permutations: %d \n", actualPermutations)
+	fmt.Printf("Time to generate all permutations %s \n", time.Since(start))
+}
+
+func main() {
+	// all times include producing messages to Pulsar using 1 channel per character (include an extra character for a space)
+
+	//7 - Time to generate all permutations 32.523004ms
+	inputWord := "planets"
+
+	//9 - Time to generate all permutations 2.449610907s
+	// inputWord := "youngster"
+
+	//10 - Time to generete all permutations 28.532050481s
+	// inputWord := "kaiserdoms"
+
+	//11 - Time to generate all permutations 6m17.08988457s
+	// inputWord := "proselytize"
+
+	//12 - ~120 minutes
+	// inputWord := "abandonwares"
+
+	//14 - n/a
+	// inputWord := "ventriloquizes"
+
+	//20 - 6613313319248080000 possibilites :D
+	// inputWord := "Counterrevolutionary"
+
+	//---------------------
+	// TODO - this needs to be moved into java.
+	//---------------------
+
+	// var skippedDueToLength, skippedDueToChar = 0, 0
+
+	// strDict := make(map[rune]int)
+	// for _, v := range inputWord {
+	// 	strDict[v] = 1
+	// }
+
+	// f, err := os.Open("/usr/share/dict/british-english")
+
+	// if err != nil {
+	// 	fmt.Println(err)
+	// }
+
+	// parent := &Node{Childern: make(map[rune]*Node), IsWord: false, Value: ' '}
+	// topParent := parent
+
+	// scanner := bufio.NewScanner(f)
+	// for scanner.Scan() {
+	// 	r := []rune(scanner.Text())
+
+	// 	if len(r) > len(inputWord) {
+	// 		skippedDueToLength++
+	// 		continue
+	// 	}
+
+	// 	cont := true
+
+	// 	for _, v := range r {
+	// 		if strDict[v] != 1 {
+	// 			skippedDueToChar++
+	// 			cont = false
+	// 			break
+	// 		}
+	// 	}
+
+	// 	if !cont {
+	// 		continue
+	// 	}
+
+	// 	for _, v := range r {
+	// 		if parent.Childern[v] == nil {
+	// 			node := &Node{Childern: make(map[rune]*Node), IsWord: false, Value: v}
+	// 			parent.Childern[v] = node
+	// 		}
+
+	// 		parent = parent.Childern[v]
+	// 	}
+	// 	parent.IsWord = true
+	// 	//start from the root for the new word
+	// 	parent = topParent
+	// }
+
+	// fmt.Printf("Skipped because of length: %d, Skipped because chars don't exist in provided word: %d.  Total skipped: %d \n", skippedDueToLength, skippedDueToChar, (skippedDueToChar + skippedDueToLength))
+	// topParent.
 
 	// for permutation := range results {
 	// 	iterations++
@@ -212,85 +298,7 @@ func (topParent Node) lookup(str []byte) {
 	// 	top = &topParent
 	// }
 
-	var finalResult []string
-
-	foundWords.Range(func(key, value interface{}) bool {
-		finalResult = append(finalResult, fmt.Sprint(key))
-		return true
-	})
-
-	fmt.Printf("Found a total of %d words. \n", len(finalResult))
-	fmt.Println(iterations)
-	fmt.Println(words)
-	// fmt.Printf("Number of possibilites generated: %d \n", len(permutations))
-	fmt.Printf("Time to generete all permutations %s \n", time.Since(start))
-}
-
-func main() {
-	inputWord := "proselytize" //11
-	// inputWord := "abandonwares" //12
-	// inputWord := "ventriloquizes" //14
-	// inputWord := "kaiserdoms" //10
-	// inputWord := "Counterrevolutionary" //20 - 6613313319248080000 possibilites :D
-	// inputWord := "planets" //7
-	// inputWord := "youngster" //9
-	// inputWord := "or" //9
-	// inputWord := "helper"
-
-	var skippedDueToLength, skippedDueToChar = 0, 0
-
-	strDict := make(map[rune]int)
-	for _, v := range inputWord {
-		strDict[v] = 1
-	}
-
-	f, err := os.Open("/usr/share/dict/british-english")
-
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	parent := &Node{Childern: make(map[rune]*Node), IsWord: false, Value: ' '}
-	topParent := parent
-
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		r := []rune(scanner.Text())
-
-		if len(r) > len(inputWord) {
-			skippedDueToLength++
-			continue
-		}
-
-		cont := true
-
-		for _, v := range r {
-			if strDict[v] != 1 {
-				skippedDueToChar++
-				cont = false
-				break
-			}
-		}
-
-		if !cont {
-			continue
-		}
-
-		for _, v := range r {
-			if parent.Childern[v] == nil {
-				node := &Node{Childern: make(map[rune]*Node), IsWord: false, Value: v}
-				parent.Childern[v] = node
-			}
-
-			parent = parent.Childern[v]
-		}
-		parent.IsWord = true
-		//start from the root for the new word
-		parent = topParent
-	}
-
-	fmt.Printf("Skipped because of length: %d, Skipped because chars don't exist in provided word: %d.  Total skipped: %d \n", skippedDueToLength, skippedDueToChar, (skippedDueToChar + skippedDueToLength))
-	topParent.lookup([]byte(inputWord))
+	lookup([]byte(inputWord))
 }
 
 /*
